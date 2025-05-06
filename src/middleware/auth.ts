@@ -1,7 +1,14 @@
+import dotenv from "dotenv";
+dotenv.config(); // ensure env variables are loaded
+
 import { auth } from "express-oauth2-jwt-bearer";
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import User from "../models/user";
+
+// Debug logs
+console.log("AUTH0_ISSUER_BASE_URL =", process.env.AUTH0_ISSUER_BASE_URL);
+console.log("AUTH0_AUDIENCE =", process.env.AUTH0_AUDIENCE);
 
 declare global {
   namespace Express {
@@ -12,12 +19,14 @@ declare global {
   }
 }
 
+// JWT Auth middleware from Auth0
 export const jwtCheck = auth({
   audience: process.env.AUTH0_AUDIENCE,
   issuerBaseURL: process.env.AUTH0_ISSUER_BASE_URL,
   tokenSigningAlg: "RS256",
 });
 
+// Parse JWT and attach user info
 export const jwtParse = async (
   req: Request,
   res: Response,
@@ -29,7 +38,6 @@ export const jwtParse = async (
     return res.sendStatus(401);
   }
 
-  // Bearer lshdflshdjkhvjkshdjkvh34h5k3h54jkh
   const token = authorization.split(" ")[1];
 
   try {
@@ -37,10 +45,7 @@ export const jwtParse = async (
     const auth0Id = decoded.sub;
 
     const user = await User.findOne({ auth0Id });
-
-    if (!user) {
-      return res.sendStatus(401);
-    }
+    if (!user) return res.sendStatus(401);
 
     req.auth0Id = auth0Id as string;
     req.userId = user._id.toString();
